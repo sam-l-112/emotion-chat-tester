@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>情緒分析測試系統</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sp-canvas: #F5F0E8;
+  --sp-cream: #FAF7F2;
+  --sp-surface: rgba(245, 240, 232, .55);
+  --sp-ink: #4A3F5C;
+  --sp-ink-soft: #7A6D8A;
+  --sp-muted: #A89BBF;
+  --sp-faint: #C8BCD8;
+  --sp-coral-400: #C98463;
+  --sp-coral-500: #B66A48;
+  --sp-coral-grad: linear-gradient(135deg, #C98463 0%, #B66A48 100%);
+  --sp-coral-glow: 0 4px 20px rgba(182, 106, 72, .3);
+  --sp-sky-500: #2E6FA8;
+  --sp-border: rgba(200, 180, 220, .2);
+  --sp-border-card: rgba(220, 190, 240, .25);
+  --sp-border-input: rgba(210, 185, 235, .4);
+  --sp-shadow-xs: 0 1px 8px rgba(180, 140, 200, .07);
+  --sp-lilac-500: #7B68C8;
+  --sp-radius-sm: 12px;
+  --sp-radius-md: 16px;
+  --sp-font-sans: "Nunito", -apple-system, "Noto Sans TC", sans-serif;
+  --sp-font-display: "Playfair Display", "Noto Serif TC", Georgia, serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; font-family: var(--sp-font-sans); font-size: 17px; background: var(--sp-canvas); color: var(--sp-ink); -webkit-font-smoothing: antialiased; }
+.layout { display: flex; height: 100dvh; overflow: hidden; position: relative; }
+.app { display: flex; flex-direction: column; flex: 1; height: 100dvh; background: rgba(245,240,232,.45); backdrop-filter: blur(28px); }
+.header { display: flex; align-items: center; gap: 14px; padding: 16px 24px 14px; border-bottom: 1px solid var(--sp-border); background: rgba(245,240,232,.55); justify-content: space-between; }
+.header-left { display: flex; align-items: center; gap: 14px; }
+.header-info h1 { font-family: var(--sp-font-display); font-size: 1rem; font-weight: 500; color: var(--sp-ink); }
+.header-info .status { font-size: 11.5px; color: var(--sp-muted); }
+.status-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #7ED6A0; margin-right: 5px; box-shadow: 0 0 0 3px rgba(126,214,160,.18); animation: pulse 2.5s ease-in-out infinite; vertical-align: middle; }
+@keyframes pulse { 0%,to { box-shadow: 0 0 0 3px rgba(126,214,160,.18); } 50% { box-shadow: 0 0 0 5px rgba(126,214,160,.06); } }
+.avatar-ring { width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(74,144,196,.38); display: flex; align-items: center; justify-content: center; background: linear-gradient(145deg,#faf7f2,#e4eef5); flex-shrink: 0; }
+.avatar-ring svg { width: 18px; height: 18px; fill: var(--sp-sky-500); }
+.emo-menu { display: flex; gap: 6px; padding: 8px 16px; flex-wrap: wrap; border-bottom: 1px solid var(--sp-border); background: rgba(245,240,232,.3); }
+.emo-btn { padding: 5px 12px; border: 1.5px solid rgba(210,185,235,.35); border-radius: 20px; background: rgba(255,255,255,.6); color: var(--sp-ink); font-size: 12px; font-weight: 600; cursor: pointer; font-family: var(--sp-font-sans); transition: all .2s; }
+.emo-btn:hover { border-color: var(--sp-coral-400); background: rgba(201,132,99,.1); }
+.emo-btn.all { background: var(--sp-coral-grad); color: #fff; border-color: transparent; box-shadow: var(--sp-coral-glow); }
+.emo-btn.all:hover { opacity: .9; }
+.emo-btn:disabled { opacity: .4; cursor: not-allowed; }
+.emo-btn.active { border-color: var(--sp-coral-400); background: rgba(201,132,99,.15); }
+.messages { flex: 1; overflow-y: auto; padding: 24px 20px 16px; display: flex; flex-direction: column; gap: 14px; scroll-behavior: smooth; }
+.messages::-webkit-scrollbar { width: 3px; }
+.messages::-webkit-scrollbar-thumb { background: rgba(200,180,220,.3); border-radius: 10px; }
+.row { display: flex; align-items: flex-end; gap: 8px; }
+.row.user { flex-direction: row-reverse; }
+.mini-avatar { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(145deg,#faf7f2,#e4eef5); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 9.5px; color: var(--sp-sky-500); font-weight: 700; border: 1.5px solid rgba(74,144,196,.28); }
+.row.user .mini-avatar { background: var(--sp-coral-grad); color: #fff; border-color: transparent; box-shadow: 0 2px 8px rgba(211,84,42,.28); }
+.bubble { max-width: 68%; padding: 10px 16px; border-radius: 20px; line-height: 1.65; word-break: break-word; font-size: 1rem; }
+.row.bot .bubble { background: rgba(255,255,255,.65); border: 1px solid rgba(210,185,235,.25); border-bottom-left-radius: 5px; box-shadow: var(--sp-shadow-xs); color: var(--sp-ink); }
+.row.user .bubble { background: var(--sp-coral-grad); color: #fff; border-bottom-right-radius: 5px; box-shadow: 0 3px 16px rgba(211,84,42,.28); }
+.typing-bubble { display: flex; align-items: center; gap: 5px; padding: 11px 16px; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--sp-muted); animation: bounce 1.3s infinite ease-in-out; }
+.dot:nth-child(2) { animation-delay: .18s; }
+.dot:nth-child(3) { animation-delay: .36s; }
+@keyframes bounce { 0%,80%,to { transform: translateY(0); opacity: .35; } 40% { transform: translateY(-6px); opacity: 1; } }
+.welcome { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding-bottom:60px; }
+.welcome-disc { width:72px; height:72px; border-radius:50%; background:var(--sp-coral-grad); box-shadow:0 8px 32px rgba(182,106,72,.36); display:flex; align-items:center; justify-content:center; position:relative; }
+.welcome-disc:after { content:""; position:absolute; top:6px; right:6px; bottom:6px; left:6px; border-radius:50%; border:1.5px solid rgba(255,255,255,.5); }
+.welcome-disc svg { width:28px; height:28px; fill:#fff; position:relative; }
+.welcome p { font-family:var(--sp-font-display); font-style:italic; color:var(--sp-muted); font-size:15px; opacity:.75; text-align:center; }
+.input-bar { padding: 10px 16px 14px; background: rgba(245,240,232,.55); border-top: 1px solid var(--sp-border); }
+.input-wrap { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,.55); border: 1.5px solid var(--sp-border-input); border-radius: 22px; padding: 7px 7px 7px 16px; transition: border-color .2s; }
+.input-wrap:focus-within { border-color: rgba(74,144,196,.5); box-shadow: 0 0 0 3px rgba(74,144,196,.1); background: rgba(255,255,255,.72); }
+.input-wrap input { flex: 1; border: none; outline: none; font-family: var(--sp-font-sans); font-size: 14.5px; background: transparent; color: var(--sp-ink); padding: 6px 0; }
+.input-wrap input::placeholder { color: var(--sp-muted); opacity: .65; }
+.send-btn { width: 32px; height: 32px; border-radius: 50%; border: none; cursor: pointer; background: var(--sp-coral-grad); color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: var(--sp-coral-glow); transition: opacity .2s; }
+.send-btn:hover { opacity: .9; }
+.send-btn svg { width: 13px; height: 13px; fill: #fff; }
+.send-btn:disabled { background: rgba(120,140,160,.38); box-shadow: none; }
+
+/* Emotion Panel */
+.emotion-panel { width: 380px; min-width: 340px; height: 100dvh; background: rgba(245,240,232,.5); border-left: 1px solid var(--sp-border); overflow-y: auto; flex-shrink: 0; }
+.ec-wrap { padding: 20px 14px; display: flex; flex-direction: column; gap: 14px; }
+.ec-title { font-size: 11.5px; font-weight: 700; color: var(--sp-muted); letter-spacing: .08em; text-transform: uppercase; }
+.ec-kpi { text-align: center; padding: 6px 0; }
+.ec-value { font-size: 42px; font-weight: 600; color: var(--sp-ink); line-height: 1; }
+.ec-label { font-size: 10.5px; color: var(--sp-muted); margin-bottom: 4px; }
+.ec-stage { font-size: 13px; font-weight: 700; margin-top: 6px; }
+.ec-stage.pos { color: #E24B4A; }
+.ec-stage.neu { color: var(--sp-lilac-500); }
+.ec-stage.neg { color: var(--sp-sky-500); }
+.emo-card { background: rgba(255,255,255,.55); border: 1px solid var(--sp-border-card); border-radius: 14px; padding: 14px; }
+.emo-bar-wrap { display: flex; align-items: center; margin: 5px 0; gap: 8px; }
+.emo-bar-label { width: 70px; text-align: right; font-size: 12px; font-weight: 600; color: var(--sp-ink-soft); }
+.emo-bar-bg { flex: 1; height: 10px; background: rgba(200,180,220,.15); border-radius: 5px; overflow: hidden; }
+.emo-bar-fill { height: 100%; border-radius: 5px; transition: width .6s ease; }
+.emo-bar-val { width: 28px; font-size: 12px; font-weight: 700; text-align: right; color: var(--sp-ink); }
+.emo-history-item { background: rgba(245,240,250,.5); border: 1px solid var(--sp-border-card); border-radius: 12px; padding: 10px; margin-bottom: 8px; }
+.emo-tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10.5px; font-weight: 700; margin: 1px; }
+.empty-state { color: var(--sp-muted); text-align: center; padding: 40px; font-size: 13px; font-style: italic; }
+.status-bar { padding: 6px 16px; font-size: 12px; color: var(--sp-muted); text-align: center; background: rgba(245,240,232,.3); border-bottom: 1px solid var(--sp-border); }
+.elapsed { font-size: 11px; color: var(--sp-ink-soft); text-align: right; margin-top: 4px; }
+.ec-summary { font-size: 12.5px; color: var(--sp-ink-soft); background: rgba(255,255,255,.4); border-radius: 10px; padding: 10px; line-height: 1.5; }
+.ctrl-btn { padding: 5px 14px; border-radius: 14px; border: 1.5px solid rgba(210,185,235,.35); background: rgba(255,255,255,.5); font-size: 12px; font-weight: 600; cursor: pointer; font-family: var(--sp-font-sans); transition: all .2s; }
+.ctrl-btn:hover { border-color: #ef4444; color: #ef4444; }
+</style>
+</head>
+<body>
+<div class="layout">
+  <div class="app">
+    <div class="header">
+      <div class="header-left">
+        <div class="avatar-ring">
+          <svg viewBox="0 0 24 24"><path d="M12 21s-7-4.35-9.5-9.06C.5 7 4 3 7.5 3c2 0 3.5 1 4.5 2.5C13 4 14.5 3 16.5 3 20 3 23.5 7 21.5 11.94 19 16.65 12 21 12 21z"/></svg>
+        </div>
+        <div class="header-info">
+          <h1>情緒分析測試</h1>
+          <div class="status"><span class="status-dot"></span><span id="statusLabel">選擇情緒開始測試</span></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="ctrl-btn" onclick="stopTest()">停止</button>
+      </div>
+    </div>
+
+    <div class="emo-menu" id="emoMenu">
+      {% for key, info in emotions.items() %}
+      <button class="emo-btn" data-emotion="{{ key }}" onclick="startTest('{{ key }}')">{{ info.name }}</button>
+      {% endfor %}
+      <button class="emo-btn all" onclick="startTest('all')">全部測試</button>
+    </div>
+
+    <div class="status-bar" id="statusBar">就緒</div>
+
+    <div class="messages" id="chatMessages">
+      <div class="welcome" id="welcomeMsg">
+        <div class="welcome-disc">
+          <svg viewBox="0 0 24 24"><path d="M12 21s-7-4.35-9.5-9.06C.5 7 4 3 7.5 3c2 0 3.5 1 4.5 2.5C13 4 14.5 3 16.5 3 20 3 23.5 7 21.5 11.94 19 16.65 12 21 12 21z"/></svg>
+        </div>
+        <p>點選上方情緒按鈕開始測試</p>
+      </div>
+    </div>
+
+    <div class="input-bar">
+      <div class="input-wrap">
+        <input type="text" placeholder="輸入訊息..." disabled id="chatInput">
+        <button class="send-btn" disabled>
+          <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="emotion-panel">
+    <div class="ec-wrap" id="emotionPanel">
+      <div class="ec-title">情緒分析</div>
+      <div id="emotionContent">
+        <div class="empty-state">等待分析資料…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const EMOTION_COLORS = {
+  joy: { bg: "#E24B4A", label: "Joy" },
+  sadness: { bg: "#378ADD", label: "Sadness" },
+  anger: { bg: "#C0392B", label: "Anger" },
+  fear: { bg: "#7B68C8", label: "Fear" },
+  disgust: { bg: "#1D9E75", label: "Disgust" },
+  surprise: { bg: "#BA7517", label: "Surprise" },
+};
+
+let pollTimer = null;
+
+function setStatus(text) {
+  document.getElementById("statusBar").textContent = text;
+  document.getElementById("statusLabel").textContent = text;
+}
+
+function disableButtons(disabled) {
+  document.querySelectorAll(".emo-btn").forEach(b => b.disabled = disabled);
+}
+
+async function startTest(emotion) {
+  disableButtons(true);
+  setStatus("測試執行中…");
+  document.getElementById("welcomeMsg").style.display = "none";
+  document.getElementById("chatMessages").innerHTML = "";
+  document.getElementById("emotionContent").innerHTML = '<div class="empty-state">分析中…</div>';
+
+  try {
+    await fetch("/api/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ emotion })
+    });
+    pollStatus();
+  } catch(e) {
+    setStatus("啟動失敗");
+    disableButtons(false);
+  }
+}
+
+async function stopTest() {
+  await fetch("/api/stop", { method: "POST" });
+  if (pollTimer) clearTimeout(pollTimer);
+  setStatus("已停止");
+  disableButtons(false);
+}
+
+function pollStatus() {
+  if (pollTimer) clearTimeout(pollTimer);
+  fetch("/api/status")
+    .then(r => r.json())
+    .then(data => {
+      renderChat(data);
+      renderEmotionPanel(data);
+
+      if (data.status === "running") {
+        setStatus("測試進行中…");
+        pollTimer = setTimeout(() => pollStatus(), 1500);
+      } else if (data.status === "done") {
+        setStatus("測試完成 ✅");
+        disableButtons(false);
+      } else if (data.status === "error") {
+        setStatus("測試失敗 ❌");
+        disableButtons(false);
+      } else {
+        setStatus("就緒");
+        disableButtons(false);
+      }
+    })
+    .catch(() => {
+      pollTimer = setTimeout(pollStatus, 2000);
+    });
+}
+
+let lastMsgCount = 0;
+
+function renderChat(data) {
+  const msgs = data.messages || [];
+  const container = document.getElementById("chatMessages");
+  const isTyping = data.typing || false;
+
+  if (msgs.length === lastMsgCount && lastMsgCount > 0 && !isTyping) return;
+
+  let html = "";
+
+  for (let i = 0; i < msgs.length; i++) {
+    const m = msgs[i];
+    const isUser = m.role === "user";
+    const rowClass = isUser ? "user" : "bot";
+    const avatarLabel = isUser ? "你" : "AI";
+    const elapsed = m.elapsed ? `<div class="elapsed">${m.elapsed}s</div>` : "";
+
+    html += `<div class="row ${rowClass}">`;
+    html += `<div class="mini-avatar">${avatarLabel}</div>`;
+    html += `<div class="bubble">${escapeHtml(m.content)}${elapsed}</div>`;
+    html += `</div>`;
+  }
+
+  // Typing indicator
+  if (isTyping && msgs.length > 0) {
+    html += `<div class="row bot"><div class="mini-avatar">AI</div><div class="bubble typing-bubble"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div></div>`;
+  }
+
+  lastMsgCount = msgs.length;
+  container.innerHTML = html;
+  container.scrollTop = container.scrollHeight;
+}
+
+function renderEmotionPanel(data) {
+  const history = data.emotion_history || [];
+  const content = document.getElementById("emotionContent");
+
+  if (!history || history.length === 0) {
+    if (data.status === "running") {
+      content.innerHTML = '<div class="empty-state">⏳ 情緒分析中…</div>';
+    }
+    return;
+  }
+
+  const fields = ["joy","sadness","anger","fear","disgust","surprise"];
+
+  // Latest analysis
+  const latest = history[history.length - 1];
+  const scores = {};
+  let total = 0;
+  for (let key of fields) {
+    scores[key] = latest[key] || 0;
+    total += scores[key];
+  }
+
+  // Calculate overall score
+  const joy = scores.joy, sad = scores.sadness, ang = scores.anger,
+        fear = scores.fear, dis = scores.disgust, sur = scores.surprise;
+  const overallScore = Math.min(100, Math.max(0, Math.round((joy*1.5 - sad - ang - fear - dis + sur*0.5 + 150)/4)));
+  const stage = overallScore >= 67 ? "positive" : overallScore <= 33 ? "negative" : "neutral";
+  const stageLabel = stage === "positive" ? "正向" : stage === "negative" ? "負向" : "中性";
+  const stageClass = stage === "positive" ? "pos" : stage === "negative" ? "neg" : "neu";
+
+  let html = "";
+
+  // KPI section
+  html += `<div class="emo-card">`;
+  html += `<div class="ec-kpi">`;
+  html += `<div class="ec-label">情緒指數</div>`;
+  html += `<div class="ec-value">${overallScore}</div>`;
+  html += `<div class="ec-stage ${stageClass}">${stageLabel}</div>`;
+  html += `</div>`;
+
+  // Bars
+  for (let key of fields) {
+    const val = scores[key];
+    if (val > 0 || key === "joy") {
+      const color = EMOTION_COLORS[key].bg;
+      const label = EMOTION_COLORS[key].label;
+      html += `<div class="emo-bar-wrap">`;
+      html += `<span class="emo-bar-label">${label}</span>`;
+      html += `<div class="emo-bar-bg"><div class="emo-bar-fill" style="width:${val}%;background:${color}"></div></div>`;
+      html += `<span class="emo-bar-val">${val}</span>`;
+      html += `</div>`;
+    }
+  }
+  if (latest.summary) {
+    html += `<div class="ec-summary">📝 ${escapeHtml(latest.summary)}</div>`;
+  }
+  if (latest.sa_elapsed) {
+    html += `<div style="font-size:11px;color:var(--sp-muted);margin-top:6px">分析耗時: ${latest.sa_elapsed}s</div>`;
+  }
+  html += `</div>`;
+
+  // History
+  if (history.length > 1) {
+    html += `<div style="margin-top:10px"><div class="ec-title">歷史紀錄</div></div>`;
+    for (let i = 0; i < history.length; i++) {
+      const h = history[i];
+      html += `<div class="emo-history-item">`;
+      html += `<div style="font-size:11px;color:var(--sp-ink-soft);margin-bottom:5px">#${i+1}</div>`;
+      for (let key of fields) {
+        const val = h[key] || 0;
+        if (val > 0) {
+          const color = EMOTION_COLORS[key].bg;
+          const label = EMOTION_COLORS[key].label;
+          html += `<span class="emo-tag" style="background:${color}18;color:${color};border:1px solid ${color}33">${label} ${val}</span>`;
+        }
+      }
+      if (h.summary) {
+        html += `<div style="font-size:11.5px;color:var(--sp-ink-soft);margin-top:4px">${escapeHtml(h.summary)}</div>`;
+      }
+      html += `</div>`;
+    }
+  }
+
+  content.innerHTML = html;
+}
+
+function escapeHtml(str) {
+  const d = document.createElement("div");
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+window.addEventListener("beforeunload", () => {
+  if (pollTimer) clearTimeout(pollTimer);
+  navigator.sendBeacon("/api/stop", "{}");
+});
+</script>
+</body>
+</html>
