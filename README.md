@@ -38,6 +38,12 @@ python --version
 
 打開「命令提示字元 (cmd)」或「PowerShell」：
 
+在那之前要先建立虛擬環境
+
+請先看文件
+
+[python_venv.md](./python_venv.md)
+
 ```cmd
 cd C:\emotion-chat-tester
 pip install playwright
@@ -49,7 +55,6 @@ playwright install chromium
 ## 🚀 執行瀏覽器自動化 (Windows)
 
 ```cmd
-cd C:\emotion-chat-tester
 python browser_agent.py
 ```
 
